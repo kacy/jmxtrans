@@ -5,7 +5,11 @@ import com.google.common.collect.ImmutableMap;
 
 import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.ThreadSafe;
+
+
 import java.util.Map;
+
+
 
 import static com.fasterxml.jackson.databind.annotation.JsonSerialize.Inclusion.NON_NULL;
 
@@ -28,10 +32,33 @@ public class Result {
 	public Result(long epoch, String attributeName, String className, String classNameAlias, String typeName, Map<String, Object> values) {
 		this.className = className;
 		this.typeName = typeName;
-		this.values = ImmutableMap.copyOf(values);
+		this.values = convertJsonValues(values);
 		this.epoch = epoch;
 		this.attributeName = attributeName;
 		this.classNameAlias = classNameAlias;
+	}
+
+	private ImmutableMap<String, Object> convertJsonValues(Map<String, Object> values) {
+
+		for (Map.Entry<String, Object> value : values.entrySet()) {
+
+			if (value.getValue().toString().contains("{") && value.getValue().toString().contains("}")) {
+				String json = value.getValue().toString();
+				json = json.replaceAll("\\{", "");
+				json = json.replaceAll("\\}", "");
+				String[] objects = json.split(",");
+
+				for (String object : objects) {
+					String[] pair = object.split(":");
+					values.put(pair[0], pair[1]);
+				}
+
+				values.remove(value.getKey());
+			}
+		}
+
+		ImmutableMap<String, Object> parsed = ImmutableMap.copyOf(values);
+		return parsed;
 	}
 
 	public String getClassName() {
@@ -63,7 +90,7 @@ public class Result {
 
 	@Override
 	public String toString() {
-		return "Result [attributeName=" + attributeName + ", className=" + className + ", typeName=" + typeName + ", values=" + values + ", epoch="
+		return "Result [attributeName=" + attributeName + ", className=" + className + ", typeName=" + typeName + ", values=" + getValues() + ", epoch="
 				+ epoch + "]";
 	}
 }
